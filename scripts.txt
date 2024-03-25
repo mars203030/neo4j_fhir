@@ -16,7 +16,7 @@ CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;
 
 #Patient Node
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent    
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent    
 with ent
 where ent.resource.resourceType ="Patient"
 CREATE (p: Patient {
@@ -32,7 +32,7 @@ CREATE (p: Patient {
 
 #Practitioner Node
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Practitioner"
 CREATE (prov: Practitioner {
@@ -46,7 +46,7 @@ CREATE (prov: Practitioner {
 
 #Organization Node
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Organization"
 create (org: Organization {
@@ -61,7 +61,7 @@ create (org: Organization {
 
 #Encounter Node
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Encounter"
 CREATE (enc: Encounter {
@@ -79,7 +79,7 @@ CREATE (enc: Encounter {
 
 #Condition
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Condition"
 CREATE (c: Condition {
@@ -97,7 +97,7 @@ CREATE (c: Condition {
 
 #Observation
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Observation"
 CREATE (obs: Observation {
@@ -114,7 +114,7 @@ CREATE (obs: Observation {
 
 #Medication
 
-CALL apoc.load.json("fhir/your_fhir_medications_file.json") YIELD value UNWIND value.entry as ent
+CALL apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") YIELD value UNWIND value.entry as ent
 WITH ent
 WHERE ent.resource.resourceType = "Medication"
 CREATE (m: Medication {
@@ -130,7 +130,7 @@ CREATE (m: Medication {
 
 #MedicationRequest
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="MedicationRequest"
 CREATE (medrequest: MedicationRequest {
@@ -150,7 +150,7 @@ CREATE (medrequest: MedicationRequest {
 #Procedure
 
 
-call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent
+call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
 with ent
 where ent.resource.resourceType ="Procedure"
 CREATE (pr: Procedure {
