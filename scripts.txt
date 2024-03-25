@@ -14,6 +14,7 @@ CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;
 
 
 
+
 #Patient Node
 
 call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent    
@@ -232,6 +233,12 @@ RETURN type(r)
 MATCH (medrequest:MedicationRequest), (m:Medication)
 WHERE medrequest.medid CONTAINS m.id
 CREATE (medrequest)-[r:REQUESTED]->(m)
+RETURN type(r)
+
+#medication request to encounter
+MATCH (medrequest:MedicationRequest), (e:Encounter)
+WHERE medrequest.encid CONTAINS e.id
+CREATE (medrequest)-[r:REQUESTED]->(e)
 RETURN type(r)
 
 
