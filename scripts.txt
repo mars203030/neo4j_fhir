@@ -17,8 +17,16 @@ CREATE CONSTRAINT pr FOR (pr:Procedure) REQUIRE pr.id IS UNIQUE;
 call apoc.load.json("fhir/Clara183_Carbajal274_c698c2cc-6766-c4dd-f15a-e4b8e023c660.json") yield value unwind value.entry as ent    
 with ent
 where ent.resource.resourceType ="Patient"
-Create (p: Patient {lname: ent.resource.name[0].family, fname: ent.resource.name[0].given[0], sex: ent.resource.gender, birthDate: ent.resource.birthDate, state: ent.resource.address[0].state, city: ent.resource.address[0].city, zip: ent.resource.address[0].postalCode, id: ent.resource.id})
-
+CREATE (p: Patient {
+  id: ent.resource.id,
+  family: ent.resource.name[0].family,
+  given: ent.resource.name[0].given[0],
+  gender: ent.resource.gender,
+  birthDate: ent.resource.birthDate,
+  state: ent.resource.address[0].state,
+  city: ent.resource.address[0].city,
+  postalCode: ent.resource.address[0].postalCode
+})
 
 #Practitioner Node
 
