@@ -24,7 +24,7 @@ CREATE (p: Patient {
   family: ent.resource.name[0].family,
   given: ent.resource.name[0].given[0],
   gender: ent.resource.gender,
-  birthDate: ent.resource.birthDate,
+  birthDate: datetime(ent.resource.birthDate),
   state: ent.resource.address[0].state,
   city: ent.resource.address[0].city,
   postalCode: ent.resource.address[0].postalCode
@@ -40,7 +40,7 @@ CREATE (prov: Practitioner {
   given: ent.resource.name[0].given[0],
   family: ent.resource.name[0].family,
   gender: ent.resource.gender,
-  birthDate: ent.resource.birthDate
+  birthDate: datetime(ent.resource.birthDate)
 })
 
 
@@ -68,8 +68,8 @@ CREATE (enc: Encounter {
   id: ent.resource.id,
   class: ent.resource.class.display,
   status: ent.resource.status,
-  periodStart: ent.resource.period.start,
-  periodEnd: ent.resource.period.end,
+  periodStart: datetime(ent.resource.period.start),
+  periodEnd: datetime(ent.resource.period.end),
   pid: ent.resource.subject.reference,
   serviceProvider: ent.resource.serviceProvider.reference,
   participant: ent.resource.participant[0].individual.reference,
@@ -90,8 +90,8 @@ CREATE (c: Condition {
   code: ent.resource.code.text,
   pid: ent.resource.subject.reference,
   encref: ent.resource.encounter.reference,
-  onsetDateTime: ent.resource.onsetDateTime,
-  recordedDate: ent.resource.recordedDate
+  onsetDateTime: datetime(ent.resource.onsetDateTime),
+  recordedDate: datetime(ent.resource.recordedDate)
 })
 
 
@@ -105,7 +105,7 @@ CREATE (obs: Observation {
   category: ent.resource.category[0].coding[0].display,
   code: ent.resource.code.text,
   encid: ent.resource.encounter.reference,
-  effectiveDateTime: ent.resource.effectiveDateTime,
+  effectiveDateTime: datetimeent.resource.effectiveDateTime),
   valueQuantityValue: ent.resource.valueQuantity.value,
   valueQuantityUnit: ent.resource.valueQuantity.unit,
   valueQuantityCode: ent.resource.valueQuantity.code,
@@ -125,7 +125,7 @@ CREATE (m: Medication {
   form: ent.resource.form.text, // Assuming you're interested in the textual representation of the form
   ingredient: ent.resource.ingredient[0].itemCodeableConcept.text, // Assuming you're using the first ingredient's textual representation
   batchNumber: ent.resource.batch.lotNumber, // Assuming you're interested in the batch lot number
-  expirationDate: ent.resource.batch.expirationDate // Assuming you're interested in the expiration date of the batch
+  expirationDate: datetime(ent.resource.batch.expirationDate) // Assuming you're interested in the expiration date of the batch
 })
 
 #MedicationRequest
@@ -144,7 +144,7 @@ CREATE (medrequest: MedicationRequest {
   encid: ent.resource.encounter.reference,
   reasonid: ent.resource.reasonReference[0].reference,
   requesterid: ent.resource.requester.reference,
-  authoredOn: ent.resource.authoredOn
+  authoredOn: datetime(ent.resource.authoredOn)
 })
 
 #Procedure
@@ -160,7 +160,7 @@ CREATE (pr: Procedure {
   pid: ent.resource.subject.reference,
   encounterReference: ent.resource.encounter.reference,
   encid: ent.resource.reasonReference[0].reference,
-  performedDateTime : ent.resource.performedDateTime,
+  performedDateTime : datetime(ent.resource.performedDateTime),
   outcome: ent.resource.outcome.text,
   reasonid: ent.resource.reasonReference[0].reference
 
