@@ -40,7 +40,7 @@ CREATE (prov: Practitioner {
   given: ent.resource.name[0].given[0],
   family: ent.resource.name[0].family,
   gender: ent.resource.gender,
-  birthDate: ent.resource.birthDate,
+  birthDate: ent.resource.birthDate
 })
 
 
@@ -139,7 +139,7 @@ CREATE (medrequest: MedicationRequest {
   intent: ent.resource.intent,
   medicationText: ent.resource.medicationCodeableConcept.text,
   medicationCode: ent.resource.medicationCodeableConcept.coding[0].code,
-  medid: ent.resource.medicationReference[0].reference
+  medid: ent.resource.medicationReference.reference,
   pid: ent.resource.subject.reference,
   encid: ent.resource.encounter.reference,
   reasonid: ent.resource.reasonReference[0].reference,
@@ -162,7 +162,7 @@ CREATE (pr: Procedure {
   encid: ent.resource.reasonReference[0].reference,
   performedDateTime : ent.resource.performedDateTime,
   outcome: ent.resource.outcome.text,
-  reasonid: ent.resource.reasonReference[0].reference,
+  reasonid: ent.resource.reasonReference[0].reference
 
 })
 
@@ -229,7 +229,10 @@ match (e: Encounter),(pr: Procedure) where pr.encid contains e.id  CREATE (pr)-[
 RETURN type(r)
 
 #medication to medication request 
-match (medrequest: MedicationRequest),(m: Medication where medrequest.medid contains m.id  CREATE (pr)-[r:REQUESTED]->(c)
+MATCH (medrequest:MedicationRequest), (m:Medication)
+WHERE medrequest.medid CONTAINS m.id
+CREATE (medrequest)-[r:REQUESTED]->(m)
 RETURN type(r)
+
 
 
