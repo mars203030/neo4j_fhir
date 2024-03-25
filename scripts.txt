@@ -87,7 +87,7 @@ CREATE (c: Condition {
   verificationStatus: ent.resource.verificationStatus.coding[0].text,
   code: ent.resource.code.text,
   pid: ent.resource.subject.reference,
-  encid: ent.resource.encounter.reference,
+  encref: ent.resource.encounter.reference,
   onsetDateTime: ent.resource.onsetDateTime,
   recordedDate: ent.resource.recordedDate
 })
