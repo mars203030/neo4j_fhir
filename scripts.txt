@@ -9,6 +9,8 @@ CREATE CONSTRAINT cond FOR (c:Condition) REQUIRE c.id IS UNIQUE;
 CREATE CONSTRAINT obs FOR (o:Observation) REQUIRE o.id IS UNIQUE;
 CREATE CONSTRAINT mr FOR (m:MedicationRequest) REQUIRE m.id IS UNIQUE;
 CREATE CONSTRAINT pr FOR (pr:Procedure) REQUIRE pr.id IS UNIQUE;
+CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;
+
 
 
 
@@ -110,7 +112,21 @@ CREATE (obs: Observation {
   pid: ent.resource.subject.reference
 })
 
+#Medication
 
+CALL apoc.load.json("fhir/your_fhir_medications_file.json") YIELD value UNWIND value.entry as ent
+WITH ent
+WHERE ent.resource.resourceType = "Medication"
+CREATE (m: Medication {
+  id: ent.resource.id,
+  code: ent.resource.code.coding[0].text, // Assuming using the first coding for simplicity
+  status: ent.resource.status,
+  manufacturer: ent.resource.manufacturer.display, // Assuming you want the display name of the manufacturer
+  form: ent.resource.form.text, // Assuming you're interested in the textual representation of the form
+  ingredient: ent.resource.ingredient[0].itemCodeableConcept.text, // Assuming you're using the first ingredient's textual representation
+  batchNumber: ent.resource.batch.lotNumber, // Assuming you're interested in the batch lot number
+  expirationDate: ent.resource.batch.expirationDate // Assuming you're interested in the expiration date of the batch
+})
 
 #MedicationRequest
 
@@ -123,6 +139,7 @@ CREATE (medrequest: MedicationRequest {
   intent: ent.resource.intent,
   medicationText: ent.resource.medicationCodeableConcept.text,
   medicationCode: ent.resource.medicationCodeableConcept.coding[0].code,
+  medid: ent.resource.medicationReference[0].reference
   pid: ent.resource.subject.reference,
   encid: ent.resource.encounter.reference,
   reasonid: ent.resource.reasonReference[0].reference,
@@ -210,4 +227,9 @@ RETURN type(r)
 
 match (e: Encounter),(pr: Procedure) where pr.encid contains e.id  CREATE (pr)-[r:PROCEDUREINENCOUNTER]->(c)
 RETURN type(r)
+
+#medication to medication request 
+match (medrequest: MedicationRequest),(m: Medication where medrequest.medid contains m.id  CREATE (pr)-[r:REQUESTED]->(c)
+RETURN type(r)
+
 
