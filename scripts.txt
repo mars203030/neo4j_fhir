@@ -159,8 +159,7 @@ CREATE (pr: Procedure {
   status: ent.resource.status,
   code: ent.resource.code.text,
   pid: ent.resource.subject.reference,
-  encounterReference: ent.resource.encounter.reference,
-  encid: ent.resource.reasonReference[0].reference,
+  encid: ent.resource.encounter.reference,
   performedDateTime : datetime(ent.resource.performedDateTime),
   outcome: ent.resource.outcome.text,
   reasonid: ent.resource.reasonReference[0].reference
