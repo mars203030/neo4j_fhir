@@ -17,154 +17,172 @@ CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;
 
 #Patient Node
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent    
-with ent
-where ent.resource.resourceType ="Patient"
-CREATE (p: Patient {
-  id: ent.resource.id,
-  family: ent.resource.name[0].family,
-  given: ent.resource.name[0].given[0],
-  gender: ent.resource.gender,
-  birthDate: datetime(ent.resource.birthDate),
-  state: ent.resource.address[0].state,
-  city: ent.resource.address[0].city,
-  postalCode: ent.resource.address[0].postalCode
-})
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Patient"
+    CREATE (p: Patient {
+      id: ent.resource.id,
+      active: ent.resource.active,
+      family: ent.resource.name[0].family,
+      given: ent.resource.name[0].given[0],
+      gender: ent.resource.gender,
+      birthDate: datetime(ent.resource.birthDate),
+      state: ent.resource.address[0].state,
+      city: ent.resource.address[0].city,
+      postalCode: ent.resource.address[0].postalCode,
+      orgid: split(ent.resource.generalPractitioner[0].reference, "|")[-1]
+    })
 
 #Practitioner Node
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Practitioner"
-CREATE (prov: Practitioner {
-  id: ent.resource.id,
-  given: ent.resource.name[0].given[0],
-  family: ent.resource.name[0].family,
-  gender: ent.resource.gender,
-  birthDate: datetime(ent.resource.birthDate)
-})
-
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Practitioner"
+    CREATE (prov: Practitioner {
+      id: ent.resource.id,
+      active: ent.resource.active,
+      given: ent.resource.name[0].given[0],
+      family: ent.resource.name[0].family,
+      gender: ent.resource.gender,
+      birthDate: datetime(ent.resource.birthDate)
+    })
 
 #Organization Node
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Organization"
-create (org: Organization {
-  id: ent.resource.id,
-  name: ent.resource.name,
-  type: ent.resource.type[0].coding[0].display, // Assuming you want the display value of the first type coding
-  city: ent.resource.address[0].city,
-  state: ent.resource.address[0].state,
-  line: ent.resource.address[0].line[0] // Assuming single line address
-})
-
+   CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Organization"
+    CREATE (org: Organization {
+      id: ent.resource.id,
+      active: ent.resource.active,
+      name: ent.resource.name,
+      type: ent.resource.type[0].coding[0].display,
+      city: ent.resource.address[0].city,
+      state: ent.resource.address[0].state,
+      line: ent.resource.address[0].line[0]
+    })
 
 #Encounter Node
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Encounter"
-CREATE (enc: Encounter {
-  id: ent.resource.id,
-  class: ent.resource.class.display,
-  status: ent.resource.status,
-  periodStart: datetime(ent.resource.period.start),
-  periodEnd: datetime(ent.resource.period.end),
-  pid: ent.resource.subject.reference,
-  serviceProvider: ent.resource.serviceProvider.reference,
-  participant: ent.resource.participant[0].individual.reference,
-  orgid: ent.resource.serviceProvider.reference
-
-})
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Encounter"
+    CREATE (enc: Encounter {
+      id: ent.resource.id,
+      class: ent.resource.class.display,
+      status: ent.resource.status,
+      type: ent.resource.type[0].coding[0].text,
+      serviceType: ent.resource.serviceType.coding.text,
+      priority: ent.resource.priority.text,
+      periodStart: datetime(ent.resource.period.start),
+      periodEnd: datetime(ent.resource.period.end),
+      pid: ent.resource.subject.reference,
+      participant: split(ent.resource.participant[0].individual.reference, "|")[-1],
+      orgid: split(ent.resource.serviceProvider.reference, "|")[-1]
+    })
 
 #Condition
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Condition"
-CREATE (c: Condition {
-  type: ent.resource.resourceType, 
-  id: ent.resource.id, 
-  clinicalStatus: ent.resource.clinicalStatus.coding[0].text, 
-  verificationStatus: ent.resource.verificationStatus.coding[0].text,
-  code: ent.resource.code.text,
-  pid: ent.resource.subject.reference,
-  encref: ent.resource.encounter.reference,
-  onsetDateTime: datetime(ent.resource.onsetDateTime),
-  recordedDate: datetime(ent.resource.recordedDate)
-})
-
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Condition"
+    CREATE (c: Condition {
+      type: ent.resource.resourceType, 
+      id: ent.resource.id, 
+      clinicalStatus: ent.resource.clinicalStatus.coding[0].text, 
+      verificationStatus: ent.resource.verificationStatus.coding[0].text,
+      code: ent.resource.code.text,
+      category: ent.resource.category[0].coding[0].display,
+      severity: ent.resource.severity.text,
+      pid: ent.resource.subject.reference,
+      encref: ent.resource.encounter.reference,
+      onsetDateTime: datetime(ent.resource.onsetDateTime),
+      recordedDate: datetime(ent.resource.recordedDate)
+    })
 
 #Observation
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Observation"
-CREATE (obs: Observation {
-  id: ent.resource.id,
-  category: ent.resource.category[0].coding[0].display,
-  code: ent.resource.code.text,
-  encid: ent.resource.encounter.reference,
-  effectiveDateTime: datetimeent.resource.effectiveDateTime),
-  valueQuantityValue: ent.resource.valueQuantity.value,
-  valueQuantityUnit: ent.resource.valueQuantity.unit,
-  valueQuantityCode: ent.resource.valueQuantity.code,
-  pid: ent.resource.subject.reference
-})
+   CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Observation"
+    CREATE (obs: Observation {
+      id: ent.resource.id,
+      status: ent.resource.status,
+      category: ent.resource.category[0].coding[0].display,
+      code: ent.resource.code.text,
+      encid: ent.resource.encounter.reference,
+      effectiveDateTime: datetime(ent.resource.effectiveDateTime),
+      valueQuantityValue: ent.resource.valueQuantity.value,
+      valueQuantityUnit: ent.resource.valueQuantity.unit,
+      valueQuantityCode: ent.resource.valueQuantity.code,
+      pid: ent.resource.subject.reference
+    })
 
 #Medication
 
-CALL apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") YIELD value UNWIND value.entry as ent
-WITH ent
-WHERE ent.resource.resourceType = "Medication"
-CREATE (m: Medication {
-  id: ent.resource.id,
-  code: ent.resource.code.coding[0].text, // Assuming using the first coding for simplicity
-  status: ent.resource.status,
-  manufacturer: ent.resource.manufacturer.display, // Assuming you want the display name of the manufacturer
-  form: ent.resource.form.text, // Assuming you're interested in the textual representation of the form
-  ingredient: ent.resource.ingredient[0].itemCodeableConcept.text, // Assuming you're using the first ingredient's textual representation
-  batchNumber: ent.resource.batch.lotNumber, // Assuming you're interested in the batch lot number
-  expirationDate: datetime(ent.resource.batch.expirationDate) // Assuming you're interested in the expiration date of the batch
-})
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType = "Medication"
+    CREATE (m: Medication {
+      id: ent.resource.id,
+      code: ent.resource.code.coding[0].text,
+      status: ent.resource.status,
+      manufacturer: ent.resource.manufacturer.display,
+      form: ent.resource.form.text,
+      ingredient: ent.resource.ingredient[0].itemCodeableConcept.text,
+      batchNumber: ent.resource.batch.lotNumber,
+      expirationDate: datetime(ent.resource.batch.expirationDate)
+    })
 
 #MedicationRequest
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="MedicationRequest"
-CREATE (medrequest: MedicationRequest {
-  id: ent.resource.id,
-  status: ent.resource.status,
-  intent: ent.resource.intent,
-  medicationText: ent.resource.medicationCodeableConcept.text,
-  medicationCode: ent.resource.medicationCodeableConcept.coding[0].code,
-  medid: ent.resource.medicationReference.reference,
-  pid: ent.resource.subject.reference,
-  encid: ent.resource.encounter.reference,
-  reasonid: ent.resource.reasonReference[0].reference,
-  requesterid: ent.resource.requester.reference,
-  authoredOn: datetime(ent.resource.authoredOn)
-})
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="MedicationRequest"
+    CREATE (medrequest: MedicationRequest {
+    id: ent.resource.id,
+    status: ent.resource.status,
+    intent: ent.resource.intent,
+    category: ent.resource.category[0].coding[0].display,
+    priority: ent.resource.priority,
+    medicationText: ent.resource.medicationCodeableConcept.text,
+    medicationCode: ent.resource.medicationCodeableConcept.coding[0].code,
+    medid: ent.resource.medicationReference.reference,
+    pid: ent.resource.subject.reference,
+    encid: ent.resource.encounter.reference,
+    reasonid: ent.resource.reasonReference[0].reference,
+    authoredOn: datetime(ent.resource.authoredOn),
+    requester: ent.resource.requester.reference
+    })
 
 #Procedure
 
 
-call apoc.load.json("file:///Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest (2)/Ermelinda113_Stoltenberg489_d012d129-bea0-743c-e6f5-fdd2a99c2b14.json") yield value unwind value.entry as ent
-with ent
-where ent.resource.resourceType ="Procedure"
-CREATE (pr: Procedure {
-  id: ent.resource.id,
-  status: ent.resource.status,
-  code: ent.resource.code.text,
-  pid: ent.resource.subject.reference,
-  encid: ent.resource.encounter.reference,
-  performedDateTime : datetime(ent.resource.performedDateTime),
-  outcome: ent.resource.outcome.text,
-  reasonid: ent.resource.reasonReference[0].reference
-
-})
+ CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Procedure"
+    CREATE (pr: Procedure {
+      id: ent.resource.id,
+      status: ent.resource.status,
+      code: ent.resource.code.text,
+      category: ent.resource.category.text,
+      pid: ent.resource.subject.reference,
+      encid: ent.resource.encounter.reference,
+      performedDateTime: datetime(ent.resource.performedDateTime),
+      outcome: ent.resource.outcome.text,
+      reasonid: ent.resource.reasonReference[0].reference,
+      recorderid: ent.resource.recorder.reference,
+      asserterid: ent.resource.asserter.reference
+    })
 
 ## Build relationships
 
