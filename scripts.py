@@ -1,0 +1,381 @@
+from neo4j import GraphDatabase
+import os
+
+# Neo4j connection setup
+uri = "neo4j://localhost:7687"
+driver = GraphDatabase.driver(uri, auth=("neo4j", "12345678"))
+
+# Function to execute a single query
+def execute_query(driver, query):
+    with driver.session(database="fhir6") as session:
+        session.run(query)
+
+# Function to construct and execute queries for a single file
+def process_file(driver, file_path):
+    # Construct the queries with the current file path
+    
+
+    
+    load_data_queries = [
+         # Patient Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Patient"
+    CREATE (p: Patient {{
+      id: ent.resource.id,
+      active: ent.resource.active,
+      family: ent.resource.name[0].family,
+      given: ent.resource.name[0].given[0],
+      gender: ent.resource.gender,
+      birthDate: datetime(ent.resource.birthDate),
+      state: ent.resource.address[0].state,
+      city: ent.resource.address[0].city,
+      postalCode: ent.resource.address[0].postalCode,
+      orgid: split(ent.resource.generalPractitioner[0].reference, "|")[-1]
+    }})
+    ''',
+    # Practitioner Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Practitioner"
+    CREATE (prov: Practitioner {{
+      id: ent.resource.id,
+      active: ent.resource.active,
+      given: ent.resource.name[0].given[0],
+      family: ent.resource.name[0].family,
+      gender: ent.resource.gender,
+      birthDate: datetime(ent.resource.birthDate)
+    }})
+    ''',
+    # Organization Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Organization"
+    CREATE (org: Organization {{
+      id: ent.resource.id,
+      active: ent.resource.active,
+      name: ent.resource.name,
+      type: ent.resource.type[0].coding[0].display,
+      city: ent.resource.address[0].city,
+      state: ent.resource.address[0].state,
+      line: ent.resource.address[0].line[0]
+    }})
+    ''',
+    # Encounter Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Encounter"
+    CREATE (enc: Encounter {{
+      id: ent.resource.id,
+      class: ent.resource.class.display,
+      status: ent.resource.status,
+      type: ent.resource.type[0].coding[0].text,
+      serviceType: ent.resource.serviceType.coding.text,
+      priority: ent.resource.priority.text,
+      periodStart: datetime(ent.resource.period.start),
+      periodEnd: datetime(ent.resource.period.end),
+      pid: ent.resource.subject.reference,
+      participant: split(ent.resource.participant[0].individual.reference, "|")[-1],
+      orgid: split(ent.resource.serviceProvider.reference, "|")[-1]
+    }})
+    ''',
+    # Condition Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Condition"
+    CREATE (c: Condition {{
+      type: ent.resource.resourceType, 
+      id: ent.resource.id, 
+      clinicalStatus: ent.resource.clinicalStatus.coding[0].text, 
+      verificationStatus: ent.resource.verificationStatus.coding[0].text,
+      code: ent.resource.code.text,
+      category: ent.resource.category[0].coding[0].display,
+      severity: ent.resource.severity.text,
+      pid: ent.resource.subject.reference,
+      encref: ent.resource.encounter.reference,
+      onsetDateTime: datetime(ent.resource.onsetDateTime),
+      recordedDate: datetime(ent.resource.recordedDate)
+    }})
+    ''',
+        # Observation Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Observation"
+    CREATE (obs: Observation {{
+      id: ent.resource.id,
+      status: ent.resource.status,
+      category: ent.resource.category[0].coding[0].display,
+      code: ent.resource.code.text,
+      encid: ent.resource.encounter.reference,
+      effectiveDateTime: datetime(ent.resource.effectiveDateTime),
+      valueQuantityValue: ent.resource.valueQuantity.value,
+      valueQuantityUnit: ent.resource.valueQuantity.unit,
+      valueQuantityCode: ent.resource.valueQuantity.code,
+      pid: ent.resource.subject.reference
+    }})
+    ''',
+
+    # Medication Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType = "Medication"
+    CREATE (m: Medication {{
+      id: ent.resource.id,
+      code: ent.resource.code.coding[0].text,
+      status: ent.resource.status,
+      manufacturer: ent.resource.manufacturer.display,
+      form: ent.resource.form.text,
+      ingredient: ent.resource.ingredient[0].itemCodeableConcept.text,
+      batchNumber: ent.resource.batch.lotNumber,
+      expirationDate: datetime(ent.resource.batch.expirationDate)
+    }})
+    ''',
+
+
+    # MedicationRequest Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="MedicationRequest"
+    CREATE (medrequest: MedicationRequest {{
+    id: ent.resource.id,
+    status: ent.resource.status,
+    intent: ent.resource.intent,
+    category: ent.resource.category[0].coding[0].display,
+    priority: ent.resource.priority,
+    medicationText: ent.resource.medicationCodeableConcept.text,
+    medicationCode: ent.resource.medicationCodeableConcept.coding[0].code,
+    medid: ent.resource.medicationReference.reference,
+    pid: ent.resource.subject.reference,
+    encid: ent.resource.encounter.reference,
+    reasonid: ent.resource.reasonReference[0].reference,
+    authoredOn: datetime(ent.resource.authoredOn),
+    requester: ent.resource.requester.reference
+    }})
+    '''
+    ,
+
+    # Procedure Node
+    f'''
+    CALL apoc.load.json("file:///{file_path}") YIELD value
+    UNWIND value.entry as ent
+    WITH ent
+    WHERE ent.resource.resourceType ="Procedure"
+    CREATE (pr: Procedure {{
+      id: ent.resource.id,
+      status: ent.resource.status,
+      code: ent.resource.code.text,
+      category: ent.resource.category.text,
+      pid: ent.resource.subject.reference,
+      encid: ent.resource.encounter.reference,
+      performedDateTime: datetime(ent.resource.performedDateTime),
+      outcome: ent.resource.outcome.text,
+      reasonid: ent.resource.reasonReference[0].reference
+
+    }})
+    '''
+    ]
+    
+    # Execute create constraints queries
+    # for query in create_constraints:
+    #     execute_query(driver, query)
+
+    # Execute data loading queries
+    for query in load_data_queries:
+        execute_query(driver, query)
+
+
+def execute_relationship_queries(driver):
+    relationship_queries = [
+    # Creating relationship patient to encounter
+    '''
+    MATCH (p:Patient),(e:Encounter)
+    WHERE e.pid CONTAINS p.id
+    CREATE (p)-[r:HASENCOUNTER]->(e)
+    RETURN type(r)
+    ''',
+    # Encounter to Observation
+    '''
+    MATCH (o:Observation),(e:Encounter)
+    WHERE o.encid CONTAINS e.id
+    CREATE (e)-[r:HASOBSERVATION]->(o)
+    RETURN type(r)
+    ''',
+    # Condition to Encounter
+    '''
+    MATCH (c:Condition),(e:Encounter)
+    WHERE c.encref CONTAINS e.id
+    CREATE (e)-[r:REVEALEDCONDITION]->(c)
+    RETURN type(r)
+    ''',
+    # Condition to Patient
+    '''
+    MATCH (c:Condition),(p:Patient)
+    WHERE c.pid CONTAINS p.id
+    CREATE (p)-[r:CONDITION {date: c.onsetDateTime}]->(c)
+    RETURN type(r)
+    ''',
+    # Temporal relationship of Conditions
+    '''
+    MATCH (c:Condition)
+    WITH c
+    ORDER BY c.onsetDateTime ASC
+    LIMIT 50
+    WITH collect(c) as conditions
+    FOREACH (i in RANGE(0, SIZE(conditions) - 2) |
+     FOREACH (node1 in [conditions[i]] |
+      FOREACH (node2 in [conditions[i+1]] |
+       CREATE (node1)-[:NEXTCONDITION {date: node2.onsetDateTime}]->(node2))))
+    ''',
+    # First and Latest Condition
+    '''
+    MATCH (c:Condition), (p:Patient)
+    WHERE c.pid CONTAINS p.id
+    WITH c, p ORDER BY c.onsetDateTime ASC LIMIT 1
+    CREATE (p)-[r:FIRSTCONDITION {date: c.onsetDateTime}]->(c)
+    RETURN type(r)
+    ''',
+    '''
+    MATCH (c:Condition), (p:Patient)
+    WHERE c.pid CONTAINS p.id
+    WITH c, p ORDER BY c.onsetDateTime DESC LIMIT 1
+    CREATE (p)-[r:LATESTCONDITION {date: c.onsetDateTime}]->(c)
+    RETURN type(r)
+    ''',
+    # medicationrequest and condition
+    '''
+    MATCH (c:Condition),(mr:MedicationRequest)
+    WHERE mr.reasonid CONTAINS c.id
+    CREATE (mr)-[r:TREATMENTFOR]->(c)
+    RETURN type(r)
+    ''',
+    # Procedure and Condition
+    '''
+    MATCH (c:Condition),(pr:Procedure)
+    WHERE pr.reasonid CONTAINS c.id
+    CREATE (pr)-[r:PROCEDUREFORTREATMENT]->(c)
+    RETURN type(r)
+    ''',
+    # Procedure and Encounter
+    '''
+    MATCH (e:Encounter),(pr:Procedure)
+    WHERE pr.encid CONTAINS e.id
+    CREATE (pr)-[r:PROCEDUREINENCOUNTER]->(e)
+    RETURN type(r)
+    ''',
+     # Procedure and observatiob
+    '''
+    MATCH (o:Observation),(pr:Procedure)
+    WHERE pr.reasonid CONTAINS o.id
+    CREATE (pr)-[r:PROCEDUREFORTREATMENT]->(o)
+    RETURN type(r)
+    ''',
+    # medication to medication request
+    '''
+    MATCH (medrequest:MedicationRequest), (m:Medication)
+    WHERE medrequest.medid CONTAINS m.id
+    CREATE (medrequest)-[r:REQUESTED]->(m)
+    RETURN type(r)
+    ''',
+    # medication request to encounter
+    '''
+    MATCH (medrequest:MedicationRequest), (e: Encounter)
+    WHERE medrequest.encid CONTAINS e.id
+    CREATE (medrequest)-[r:REQUESTED]->(e)
+    RETURN type(r)
+    ''',
+    #organiztion to encounter
+    '''
+    MATCH (enc:Encounter), (org:Organization)
+    WHERE enc.orgid = org.id
+    CREATE (enc)-[:HAS_SERVICE_PROVIDER]->(org)
+    ''',
+    # practitioner to encounter
+    '''
+    MATCH (enc:Encounter), (prov:Practitioner)
+    WHERE enc.participant = prov.id
+    CREATE (enc)-[:HAS_PARTICIPANT]->(prov)''',
+    # patient to organization
+    '''
+    MATCH (p:Patient), (org:Organization)
+    WHERE p.orgid = org.id
+    CREATE (p)-[:REGISTERED_AT]->(org)
+    ''',
+    # patient to practitioner
+    '''
+    MATCH (p:Patient), (prov:Practitioner)
+    WHERE p.orgid = prov.id  // Assuming orgid in Patient node is used to reference the general practitioner. Adjust if a different field is used.
+    CREATE (p)-[:HAS_GENERAL_PRACTITIONER]->(prov)
+
+    ''',
+
+    # meddication request to practitioner
+    '''
+    MATCH (medrequest:MedicationRequest), (prov:Practitioner)
+    WHERE medrequest.requester = prov.id
+    CREATE (medrequest)-[:REQUESTED_BY]->(prov)
+    ''',
+
+    # medication request to orgnization
+    '''
+    MATCH (medrequest:MedicationRequest), (org:Organization)
+    WHERE medrequest.requesterid = org.id // This assumes a direct, but incorrect, linkage
+    CREATE (medrequest)-[:REQUESTED_FOR]->(org)''',
+
+
+
+    ]
+    with driver.session(database="fhir6") as session:
+        for query in relationship_queries:
+            session.run(query)
+
+def execute_constraints(driver):
+
+    create_constraints = [
+    "CREATE CONSTRAINT pid FOR (p:Patient) REQUIRE p.id IS UNIQUE;",
+    "CREATE CONSTRAINT prid FOR (p:Practitioner) REQUIRE p.id IS UNIQUE;",
+    "CREATE CONSTRAINT orgid FOR (o:Organization) REQUIRE o.id IS UNIQUE;",
+    "CREATE CONSTRAINT encid FOR (e:Encounter) REQUIRE e.id_name IS UNIQUE;",
+    "CREATE CONSTRAINT cond FOR (c:Condition) REQUIRE c.id IS UNIQUE;",
+    "CREATE CONSTRAINT obs FOR (o:Observation) REQUIRE o.id IS UNIQUE;",
+    "CREATE CONSTRAINT mr FOR (m:MedicationRequest) REQUIRE m.id IS UNIQUE;",
+    "CREATE CONSTRAINT pr FOR (pr:Procedure) REQUIRE pr.id IS UNIQUE;",
+    "CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;"
+]
+    with driver.session(database="fhir6") as session:
+        for query in create_constraints:
+            session.run(query)
+
+# Main function to loop through files and process each
+def main():
+    execute_constraints(driver)
+    
+    folder_path = "/Users/mariamalmutairi/Downloads/synthea_sample_data_fhir_latest"
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".json"):  # Ensure we're only processing JSON files
+            file_path = os.path.join(folder_path, filename)
+            print(f"Processing {filename}...")
+            process_file(driver, filename)
+    
+    execute_relationship_queries(driver)
+
+    print("Completed processing all files.")
+
+# Execute the main function
+if __name__ == "__main__":
+    main()
