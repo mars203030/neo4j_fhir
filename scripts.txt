@@ -179,84 +179,145 @@ CREATE CONSTRAINT medid FOR (m:Medication) REQUIRE m.id IS UNIQUE;
       encid: ent.resource.encounter.reference,
       performedDateTime: datetime(ent.resource.performedDateTime),
       outcome: ent.resource.outcome.text,
-      reasonid: ent.resource.reasonReference[0].reference,
-      recorderid: ent.resource.recorder.reference,
-      asserterid: ent.resource.asserter.reference
+      reasonid: ent.resource.reasonReference[0].reference
+
     })
 
 ## Build relationships
 
-#Creating relationship patient to encounter
+# Creating relationship patient to encounter
 
-match (p:Patient),(e:Encounter) where e.pid contains p.id CREATE (p)-[r:HASENCOUNTER]->(e)
+MATCH (p:Patient),(e:Encounter)
+WHERE e.pid CONTAINS p.id
+CREATE (p)-[r:HASENCOUNTER]->(e)
 RETURN type(r)
 
-#Encounter to Observation
+# Encounter to Observation
 
-match (o: Observation),(e: Encounter) where o.encid contains e.id CREATE (e)-[r:HASOBSERVATION]->(o)
-RETURN type(r)
- 
-#Condition to Encounter
-
-match (c: Condition),(e: Encounter) where c.encref contains e.id CREATE (e)-[r:REVEALEDCONDITION]->(c)
+MATCH (o:Observation),(e:Encounter)
+WHERE o.encid CONTAINS e.id
+CREATE (e)-[r:HASOBSERVATION]->(o)
 RETURN type(r)
 
-#Condition to Patient
+# Condition to Encounter
 
-match (c: Condition),(p: Patient) where c.pid contains p.id CREATE (p)-[r:CONDITION {date: c.onsetdate}]->(c)
+MATCH (c:Condition),(e:Encounter)
+WHERE c.encref CONTAINS e.id
+CREATE (e)-[r:REVEALEDCONDITION]->(c)
 RETURN type(r)
 
-#Temporal relationship of Conditions
+# Condition to Patient
+
+MATCH (c:Condition),(p:Patient)
+WHERE c.pid CONTAINS p.id
+CREATE (p)-[r:CONDITION {date: c.onsetDateTime}]->(c)
+RETURN type(r)
+
+# Temporal relationship of Conditions
 
 MATCH (c:Condition)
 WITH c
-ORDER BY c.onsetdate ASC
+ORDER BY c.onsetDateTime ASC
 LIMIT 50
 WITH collect(c) as conditions
-FOREACH (i in range(0, size(conditions) - 2) |
- FOREACH (node1 in [conditions[i]] |
-  FOREACH (node2 in [conditions[i+1]] |
-   CREATE (node1)-[:NEXTCONDITION{date: node2.onsetdate}]->(node2))))
+FOREACH (i in RANGE(0, SIZE(conditions) - 2) |
+FOREACH (node1 in [conditions[i]] |
+FOREACH (node2 in [conditions[i+1]] |
+CREATE (node1)-[:NEXTCONDITION {date: node2.onsetDateTime}]->(node2))))
 
+# First and Latest Condition
 
-
-MATCH (c:Condition), (p:Patient) where c.pid contains p.id 
-WITH c, p ORDER BY c.onsetdate ASC LIMIT 1
-CREATE (p)-[r:FIRSTCONDITION {date: c.onsetdate}]->(c)
+MATCH (c:Condition), (p:Patient)
+WHERE c.pid CONTAINS p.id
+WITH c, p ORDER BY c.onsetDateTime ASC LIMIT 1
+CREATE (p)-[r:FIRSTCONDITION {date: c.onsetDateTime}]->(c)
 RETURN type(r)
 
 
-MATCH (c:Condition), (p:Patient) where c.pid contains p.id 
-WITH c, p ORDER BY c.onsetdate DESC LIMIT 1
-CREATE (p)-[r:LATESTCONDITION {date: c.onsetdate}]->(c)
-RETURN type(r)
- 
- 
-#medicationrequest and condition
- 
-match (c: Condition),(mr: MedicationRequest) where mr.reasonid contains c.id CREATE (mr)-[r:TREATMENTFOR]->(c)
+MATCH (c:Condition), (p:Patient)
+WHERE c.pid CONTAINS p.id
+WITH c, p ORDER BY c.onsetDateTime DESC LIMIT 1
+CREATE (p)-[r:LATESTCONDITION {date: c.onsetDateTime}]->(c)
 RETURN type(r)
 
-#Procedure and Condition
-#Procedure and Encounter
+# medicationrequest and condition
 
-match (c: Condition),(pr: Procedure) where pr.reasonid contains c.id  CREATE (pr)-[r:PROCEDUREFORTREATMENT]->(c)
+MATCH (c:Condition),(mr:MedicationRequest)
+WHERE mr.reasonid CONTAINS c.id
+CREATE (mr)-[r:TREATMENTFOR]->(c)
 RETURN type(r)
 
-match (e: Encounter),(pr: Procedure) where pr.encid contains e.id  CREATE (pr)-[r:PROCEDUREINENCOUNTER]->(c)
+# Procedure and Condition
+
+MATCH (c:Condition),(pr:Procedure)
+WHERE pr.reasonid CONTAINS c.id
+CREATE (pr)-[r:PROCEDUREFORTREATMENT]->(c)
 RETURN type(r)
 
-#medication to medication request 
+# Procedure and Encounter
+
+MATCH (e:Encounter),(pr:Procedure)
+WHERE pr.encid CONTAINS e.id
+CREATE (pr)-[r:PROCEDUREINENCOUNTER]->(e)
+RETURN type(r)
+
+# Procedure and observatiob
+
+MATCH (o:Observation),(pr:Procedure)
+WHERE pr.reasonid CONTAINS o.id
+CREATE (pr)-[r:PROCEDUREFORTREATMENT]->(o)
+RETURN type(r)
+
+# medication to medication request
+
 MATCH (medrequest:MedicationRequest), (m:Medication)
 WHERE medrequest.medid CONTAINS m.id
 CREATE (medrequest)-[r:REQUESTED]->(m)
 RETURN type(r)
 
-#medication request to encounter
-MATCH (medrequest:MedicationRequest), (e:Encounter)
+# medication request to encounter
+
+MATCH (medrequest:MedicationRequest), (e: Encounter)
 WHERE medrequest.encid CONTAINS e.id
 CREATE (medrequest)-[r:REQUESTED]->(e)
 RETURN type(r)
 
+#organiztion to encounter
+
+MATCH (enc:Encounter), (org:Organization)
+WHERE enc.orgid = org.id
+CREATE (enc)-[:HAS_SERVICE_PROVIDER]->(org)
+
+# practitioner to encounter
+
+MATCH (enc:Encounter), (prov:Practitioner)
+WHERE enc.participant = prov.id
+CREATE (enc)-[:HAS_PARTICIPANT]->(prov)
+# patient to organization
+
+MATCH (p:Patient), (org:Organization)
+WHERE p.orgid = org.id
+CREATE (p)-[:REGISTERED_AT]->(org)
+
+# patient to practitioner
+
+MATCH (p:Patient), (prov:Practitioner)
+WHERE p.orgid = prov.id // Assuming orgid in Patient node is used to reference the general practitioner. Adjust if a different field is used.
+CREATE (p)-[:HAS_GENERAL_PRACTITIONER]->(prov)
+
+
+
+# meddication request to practitioner
+
+MATCH (medrequest:MedicationRequest), (prov:Practitioner)
+WHERE medrequest.requester = prov.id
+CREATE (medrequest)-[:REQUESTED_BY]->(prov)
+
+
+# medication request to orgnization
+
+MATCH (medrequest:MedicationRequest), (org:Organization)
+WHERE medrequest.requesterid = org.id // This assumes a direct, but incorrect, linkage
+CREATE (medrequest)-[:REQUESTED_FOR]->(org)
 
 
